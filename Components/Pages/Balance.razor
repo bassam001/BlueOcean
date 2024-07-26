@@ -1,0 +1,27 @@
+﻿@page "/balance"
+@inject TraderApiClient TraderApiClient
+
+<PageTitle>Company Balance</PageTitle>
+
+<h3>Company Balance</h3>
+
+@if (companyData == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div>
+        <p><strong>Company Name:</strong> @companyData.Name</p>
+        <p><strong>Balance:</strong> @companyData.Cash</p>
+    </div>
+}
+
+@code {
+    private CompanyData companyData;
+
+    protected override async Task OnInitializedAsync()
+    {
+        companyData = await TraderApiClient.GetCompanyAsync();
+    }
+}
