@@ -1,35 +1,52 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">BlueOcean</a>
+﻿@inject TraderApiClient ApiClient
+
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <a class="navbar-brand" href="/">BlueOcean</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/company">Company</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/available-boats">Available Boats</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/balance">Balance</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/balance">Balance: @(balance?.ToString("C") ?? "Loading...")</a>
+            </li>
+        </ul>
     </div>
-</div>
+</nav>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+@code {
+    private double? balance;
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCompanyBalance();
+    }
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="company">
-                <span class="oi oi-briefcase" aria-hidden="true"></span> Company
-            </NavLink>
-        </div>
+    private async Task LoadCompanyBalance()
+    {
+        try
+        {
+            var companyData = await ApiClient.GetCompanyAsync();
+            balance = companyData.Cash;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching company balance: {ex.Message}");
+            balance = null;
+        }
+    }
+}
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="boats">
-                <span class="oi oi-briefcase" aria-hidden="true"></span>Available Boats
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="balance">
-                <span class="bi bi-currency-dollar" aria-hidden="true"></span> Balance
-            </NavLink>
-        </div>
-    </nav>
-</div>
