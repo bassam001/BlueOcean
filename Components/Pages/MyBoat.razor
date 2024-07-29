@@ -1,0 +1,47 @@
+﻿<!-- Components/GetBoats.razor -->
+@page "/myboat"
+@inject TraderApiClient ApiClient
+
+<PageTitle>Get Boats</PageTitle>
+
+<h3>Get Boats</h3>
+
+@if (boats == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Boat ID</th>
+                <th>Player ID</th>
+                <th>Current Fuel</th>
+                <th>Max Capacity</th>
+                <th>Max Speed</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var boat in boats)
+            {
+                <tr>
+                    <td>@boat.Id</td>
+                    <td>@boat.OwningPlayerId</td>
+                    <td>@boat.CurrentFuel</td>
+                    <td>@boat.MaxCapacity</td>
+                    <td>@boat.MaxSpeed</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<GameBoatWithCargo> boats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        boats = await ApiClient.GetBoatAsync();
+    }
+}

@@ -1,0 +1,57 @@
+﻿@page "/boats"
+@inject TraderApiClient ApiClient
+
+<h3>Available Boats</h3>
+
+@if (boats == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (boats.Count == 0)
+{
+    <p>No boats available.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Boat ID</th>
+                <th>Type</th>
+                <th>Fuel</th>
+                <th>Capacity</th>
+                <th>Location</th>
+                <th>Moving</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var boat in boats)
+            {
+                <tr>
+                    <td>@boat.Id</td>
+                    <td>@boat.GameBoatType</td>
+                    <td>@boat.CurrentFuel</td>
+                    <td>@boat.MaxCapacity</td>
+                    <td>@boat.WorldLocation</td>
+                    <td>@(boat.Moving ? "Yes" : "No")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<GameBoat> boats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            boats = await ApiClient.GetAvailableBoatsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching boats data: {ex.Message}");
+        }
+    }
+}

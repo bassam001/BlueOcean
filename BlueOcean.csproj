@@ -6,4 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Components\Pages\GetBoat.razor~RF9c8bcc6d.TMP" />
+  </ItemGroup>
+
 </Project>
