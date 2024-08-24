@@ -1,0 +1,108 @@
+﻿@page "/boat/{BoatId:guid}"
+@inject TraderApiClient ApiClient
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+
+<h3>Boat Details</h3>
+
+@if (boatData != null)
+{
+    <div class="mt-3">
+        <h4>Boat ID: @boatData.Id</h4>
+        <p><strong>Type:</strong> @boatData.GameBoatType</p>
+        <p><strong>Cargo Type:</strong> @boatData.CargoType</p>
+        <p><strong>Current Fuel:</strong> @boatData.CurrentFuel / @boatData.MaxFuel</p>
+        <p><strong>Max Capacity:</strong> @boatData.MaxCapacity</p>
+        <p><strong>Max Speed:</strong> @boatData.MaxSpeed</p>
+        <p><strong>Current Position:</strong> @boatData.CurrentPosition</p>
+        <p><strong>Destination:</strong> @boatData.CurrentDestination</p>
+        <p><strong>State:</strong> @boatData.CurrentState</p>
+        <p><strong>Location:</strong> @boatData.WorldLocation</p>
+        <p><strong>For Sale:</strong> @boatData.ForSale ? "Yes" : "No"</p>
+        @if (boatData.Loaded != null && boatData.Loaded.Any())
+        {
+            <h5>Loaded Cargo</h5>
+            <ul>
+                @foreach (var cargo in boatData.Loaded)
+                {
+                    <li>Cargo ID: @cargo.Id, Amount: @cargo.Amount</li>
+                }
+            </ul>
+        }
+    </div>
+
+    @if (boatData.ForSale)
+    {
+        <button class="btn btn-danger" @onclick="SellBoat">Sell Boat</button>
+    }
+    <button class="btn btn-warning" @onclick="FuelBoat">Fuel Boat</button>
+    <button class="btn btn-success" @onclick="RepairBoat">Repair Boat</button>
+}
+else
+{
+    <p>Loading boat details...</p>
+}
+
+@code {
+    [Parameter]
+    public Guid BoatId { get; set; }
+
+    private GameBoatWithCargo boatData;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBoatData();
+    }
+
+    private async Task LoadBoatData()
+    {
+        try
+        {
+            boatData = await ApiClient.GetBoatAsync(BoatId);
+        }
+        catch (Exception ex)
+        {
+            ApiClient.ShowErrorMessage($"Error fetching boat data: {ex.Message}");
+        }
+    }
+
+    private async Task SellBoat()
+    {
+        try
+        {
+            Navigation.NavigateTo("/marketplace");
+        }
+        catch (Exception ex)
+        {
+            ApiClient.ShowErrorMessage($"Error selling boat: {ex.Message}");
+        }
+    }
+
+    private async Task FuelBoat()
+    {
+        try
+        {
+            double amount = boatData.MaxFuel - boatData.CurrentFuel;
+            await ApiClient.FuelBoatAsync(BoatId.ToString(), (int)amount);
+            await LoadBoatData();
+        }
+        catch (Exception ex)
+        {
+            ApiClient.ShowErrorMessage($"Error fueling boat: {ex.Message}");
+        }
+    }
+
+    private async Task RepairBoat()
+    {
+        try
+        {
+            int repairAmount = 100;
+            await ApiClient.RepairBoatAsync(BoatId.ToString(), repairAmount);
+            await LoadBoatData();
+        }
+        catch (Exception ex)
+        {
+            ApiClient.ShowErrorMessage($"Error repairing boat: {ex.Message}");
+        }
+    }
+}

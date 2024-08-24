@@ -1,0 +1,80 @@
+﻿@page "/available-contracts"
+@rendermode InteractiveServer
+@inject TraderApiClient ApiClient
+
+<h3>Available Contracts</h3>
+
+<button class="btn btn-primary" @onclick="GetAvailableContracts">Load Available Contracts</button>
+
+@if (availableContracts != null)
+{
+    <table class="table mt-3">
+        <thead>
+            <tr>
+                <th>Contract ID</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Cargo Type</th>
+                <th>Amount</th>
+                <th>Payment</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var contract in availableContracts)
+            {
+                <tr>
+                    <td>@contract.Id</td>
+                    <td>@contract.FromLocation.Name</td>
+                    <td>@contract.ToLocation.Name</td>
+                    <td>@contract.CargoType</td>
+                    <td>@contract.CargoAmount</td>
+                    <td>@contract.TotalPayment</td>
+                    <td>
+                        <button class="btn btn-success" @onclick="() => TakeContract(contract.Id.ToString())">Take Contract</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No contracts available.</p>
+}
+
+@code {
+    private List<GameAvailableContract> availableContracts;
+
+    private async Task GetAvailableContracts()
+    {
+        try
+        {
+            availableContracts = await ApiClient.GetAvailableContractsAsync();
+        }
+        catch (Exception ex)
+        {
+            ApiClient.ShowErrorMessage($"Error fetching available contracts: {ex.Message}");
+        }
+    }
+
+    private async Task TakeContract(string contractId)
+    {
+        try
+        {
+            bool success = await ApiClient.TakeContractAsync(contractId);
+            if (success)
+            {
+                await GetAvailableContracts(); // Refresh the list after taking a contract
+            }
+            else
+            {
+                ApiClient.ShowErrorMessage($"Failed to take contract with ID: {contractId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ApiClient.ShowErrorMessage($"Error taking contract: {ex.Message}");
+        }
+    }
+}

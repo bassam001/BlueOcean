@@ -1,0 +1,41 @@
+﻿@page "/repair-boat"
+@inject TraderApiClient ApiClient
+
+<h3>Repair a Boat</h3>
+
+<div class="form-group">
+    <label for="boatId">Boat ID</label>
+    <input type="text" class="form-control" id="boatId" @bind="boatId" placeholder="Enter Boat ID" />
+</div>
+
+<div class="form-group">
+    <label for="repairAmount">Repair Amount</label>
+    <input type="number" class="form-control" id="repairAmount" @bind="repairAmount" placeholder="Enter Amount" />
+</div>
+
+<button class="btn btn-primary" @onclick="RepairMyBoat">Repair Boat</button>
+
+@if (repairResult.HasValue)
+{
+    <div class="alert alert-success mt-3">
+        Boat repaired successfully. New Repair Level: @repairResult
+    </div>
+}
+
+@code {
+    private string boatId;
+    private int repairAmount;
+    private int? repairResult;
+
+    private async Task RepairMyBoat()
+    {
+        try
+        {
+            repairResult = await ApiClient.RepairBoatAsync(boatId, repairAmount);
+        }
+        catch (Exception ex)
+        {
+            ApiClient.ShowErrorMessage($"Error repairing boat: {ex.Message}");
+        }
+    }
+}

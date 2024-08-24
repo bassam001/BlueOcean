@@ -1,0 +1,283 @@
+﻿@page "/game-operations"
+@inject TraderApiClient TraderApiClient
+@rendermode InteractiveServer
+
+<h3>Game Operations</h3>
+
+@if (SignedContracts.Count > 0)
+{
+    <div>
+        <h4>Your Signed Contracts</h4>
+        <select @bind="SelectedContractId" @bind:after="OnSignedContractChanged">
+            <option value="">-- Select Signed Contract --</option>
+            @foreach (var contract in SignedContracts)
+            {
+                <option value="@contract.Id">@contract.Cargo: @contract.FromLocation.Name to @contract.ToLocation.Name</option>
+            }
+        </select>
+    </div>
+}
+else
+{
+    <p>No signed contracts yet.</p>
+}
+
+@if (!ShowAvailableContracts && !IsContractSigned)
+{
+    <div>
+        <button class="btn btn-primary" @onclick="PromptAvailableContracts">Would you like to view available contracts?</button>
+    </div>
+}
+
+@if (ShowAvailableContracts && !IsContractSigned)
+{
+    <div>
+        <h4>Available Contracts</h4>
+        <select @bind="SelectedContractId" @bind:after="OnAvailableContractChanged">
+            <option value="">-- Select Contract --</option>
+            @foreach (var contract in AvailableContracts)
+            {
+                <option value="@contract.Id">@contract.Cargo: @contract.FromLocation.Name to @contract.ToLocation.Name</option>
+            }
+        </select>
+
+        @if (SelectedContract != null)
+        {
+            <div>
+                <h5>Contract Details</h5>
+                <p><strong>Cargo:</strong> @SelectedContract.Cargo</p>
+                <p><strong>From:</strong> @SelectedContract.FromLocation.Name</p>
+                <p><strong>To:</strong> @SelectedContract.ToLocation.Name</p>
+                <p><strong>Payment:</strong> @SelectedContract.TotalPayment</p>
+                <p><strong>Deliver Before:</strong> @SelectedContract.DeliverBefore.ToShortDateString()</p>
+                <button class="btn btn-success" @onclick="ConfirmContract">Sign Contract</button>
+            </div>
+        }
+    </div>
+}
+
+@if (IsContractSigned)
+{
+    <div>
+        <h4>Cargo Ready to Load</h4>
+        <p>@SelectedContract.CargoAmount kg of @SelectedContract.CargoType</p>
+    </div>
+
+    <div>
+        <h4>Your Boats</h4>
+        <select @bind="SelectedBoatId">
+            <option value="">-- Select Boat --</option>
+            @foreach (var boat in PlayerBoats)
+            {
+                <option value="@boat.Id">@boat.GameBoatType - @boat.CurrentFuel Fuel (@boat.WorldLocation, @boat.CurrentState)</option>
+            }
+        </select>
+    </div>
+
+    <div>
+        <h4>Boat Actions</h4>
+        <button class="btn btn-info" @onclick="ValidateAndLoadBoat">Load Boat</button>
+        <button class="btn btn-warning" @onclick="MoveBoat">Move Boat</button>
+        <button class="btn btn-danger" @onclick="UnloadBoat">Unload Boat</button>
+    </div>
+
+    @if (IsBoatMoving)
+    {
+        <div>
+            <h5>Boat is moving...</h5>
+            <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: @BoatProgress%;" aria-valuenow="@BoatProgress" aria-valuemin="0" aria-valuemax="100">@BoatProgress%</div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<GameAvailableContract> AvailableContracts = new();
+    private List<GameBoatWithCargo> PlayerBoats = new();
+    private List<GameContract> SignedContracts = new();
+    private GameAvailableContract SelectedContract;
+    private string SelectedContractId;
+    private string SelectedBoatId;
+    private bool IsContractSigned = false;
+    private bool IsBoatMoving = false;
+    private int BoatProgress = 0;
+    private bool ShowAvailableContracts = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSignedContracts();
+        await LoadPlayerBoats();
+    }
+
+    private async Task LoadSignedContracts()
+    {
+        SignedContracts = await TraderApiClient.GetPlayerContractsAsync(includeDone: false);
+    }
+
+    private async Task LoadAvailableContracts()
+    {
+        AvailableContracts = await TraderApiClient.GetAvailableContractsAsync();
+    }
+
+    private async Task LoadPlayerBoats()
+    {
+        PlayerBoats = await TraderApiClient.GetBoatAsync();
+    }
+
+    private void PromptAvailableContracts()
+    {
+        ShowAvailableContracts = true;
+        LoadAvailableContracts();
+    }
+
+    private void OnSignedContractChanged()
+    {
+        var contract = SignedContracts.FirstOrDefault(c => c.Id.ToString() == SelectedContractId);
+        if (contract != null)
+        {
+            SelectedContract = new GameAvailableContract
+            {
+                Id = contract.Id,
+                Cargo = contract.Cargo,
+                FromLocation = contract.FromLocation,
+                ToLocation = contract.ToLocation,
+                TotalPayment = contract.TotalPayment,
+                DeliverBefore = contract.DeliverBefore,
+                CargoAmount = contract.CargoAmount
+            };
+            IsContractSigned = true;
+        }
+    }
+
+    private void OnAvailableContractChanged()
+    {
+        SelectedContract = AvailableContracts.FirstOrDefault(c => c.Id.ToString() == SelectedContractId);
+    }
+
+    private async Task ConfirmContract()
+    {
+        if (!string.IsNullOrEmpty(SelectedContractId))
+        {
+            bool success = await TraderApiClient.TakeContractAsync(SelectedContractId);
+            if (success)
+            {
+                IsContractSigned = true;
+                await LoadSignedContracts(); 
+                await LoadPlayerBoats(); 
+            }
+        }
+    }
+
+    private async Task ValidateAndLoadBoat()
+    {
+        if (string.IsNullOrEmpty(SelectedBoatId))
+        {
+            await TraderApiClient.ShowErrorMessage("Please select a boat.");
+            return;
+        }
+
+        var selectedBoat = PlayerBoats.FirstOrDefault(b => b.Id.ToString() == SelectedBoatId);
+        if (selectedBoat == null)
+        {
+            await TraderApiClient.ShowErrorMessage("The selected boat is not available.");
+            return;
+        }
+
+
+        if (selectedBoat.WorldLocation != SelectedContract.FromLocation.Name)
+        {
+            await TraderApiClient.ShowErrorMessage("The selected boat is not at the correct location to load the cargo.");
+            return;
+        }
+
+        if (!CanBoatHandleCargo(selectedBoat, SelectedContract.CargoType.ToString()))
+        {
+            await TraderApiClient.ShowErrorMessage("The selected boat cannot handle this type of cargo.");
+            return;
+        }
+
+        await LoadBoat();
+    }
+
+    private bool CanBoatHandleCargo(GameBoatWithCargo boat, string cargoType)
+    { 
+        // to do later up on ..
+        return true; 
+    }
+
+    private async Task LoadBoat()
+    {
+        var amountToLoad = SelectedContract.CargoAmount; 
+        bool success = await TraderApiClient.LoadCargoAsync(SelectedBoatId, SelectedContractId, amountToLoad);
+        if (success)
+        {
+            await LoadPlayerBoats(); 
+        }
+        else
+        {
+            await TraderApiClient.ShowErrorMessage("Failed to load the boat. Please try again.");
+        }
+    }
+
+    private async Task MoveBoat()
+    {
+        if (string.IsNullOrEmpty(SelectedBoatId))
+        {
+            await TraderApiClient.ShowErrorMessage("Please select a boat to move.");
+            return;
+        }
+
+        var selectedBoat = PlayerBoats.FirstOrDefault(b => b.Id.ToString() == SelectedBoatId);
+        if (selectedBoat == null)
+        {
+            await TraderApiClient.ShowErrorMessage("The selected boat is not available.");
+            return;
+        }
+
+        var moveToNode = SelectedContract.ToLocation.NodeId; 
+        IsBoatMoving = true;
+        BoatProgress = 0;
+
+
+        while (BoatProgress < 100)
+        {
+            await Task.Delay(1000); 
+            BoatProgress += 10;
+            if (BoatProgress >= 100)
+            {
+                IsBoatMoving = false;
+                BoatProgress = 100;
+            }
+        }
+    }
+
+    private async Task UnloadBoat()
+    {
+        if (string.IsNullOrEmpty(SelectedBoatId))
+        {
+            await TraderApiClient.ShowErrorMessage("Please select a boat to unload.");
+            return;
+        }
+
+        var selectedBoat = PlayerBoats.FirstOrDefault(b => b.Id.ToString() == SelectedBoatId);
+        if (selectedBoat == null)
+        {
+            await TraderApiClient.ShowErrorMessage("The selected boat is not available.");
+            return;
+        }
+
+        var amountToUnload = SelectedContract.CargoAmount; 
+        bool success = await TraderApiClient.UnloadCargoAsync(SelectedBoatId, SelectedContractId, amountToUnload);
+        if (success)
+        {
+            await LoadPlayerBoats(); 
+        }
+        else
+        {
+            await TraderApiClient.ShowErrorMessage("Failed to unload the boat. Please try again.");
+        }
+    }
+
+ 
+}

@@ -1,6 +1,7 @@
-﻿<!-- Components/GetBoats.razor -->
-@page "/myboat"
+﻿@page "/myboat"
 @inject TraderApiClient ApiClient
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
 
 <PageTitle>Get Boats</PageTitle>
 
@@ -25,7 +26,7 @@ else
         <tbody>
             @foreach (var boat in boats)
             {
-                <tr>
+                <tr @onclick="() => NavigateToBoatDetails(boat.Id)" style="cursor: pointer;">
                     <td>@boat.Id</td>
                     <td>@boat.OwningPlayerId</td>
                     <td>@boat.CurrentFuel</td>
@@ -43,5 +44,10 @@ else
     protected override async Task OnInitializedAsync()
     {
         boats = await ApiClient.GetBoatAsync();
+    }
+
+    private void NavigateToBoatDetails(Guid boatId)
+    {
+        Navigation.NavigateTo($"/boat/{boatId}");
     }
 }

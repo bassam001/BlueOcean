@@ -1,0 +1,54 @@
+﻿<!-- Components/MyContracts.razor -->
+@page "/mycontracts"
+@rendermode InteractiveServer
+@inject TraderApiClient ApiClient
+
+<h3>My Contracts</h3>
+
+<button class="btn btn-primary" @onclick="GetMyContracts">Load My Contracts</button>
+
+@if (myContracts != null)
+{
+    <table class="table mt-3">
+        <thead>
+            <tr>
+                <th>Contract ID</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Cargo Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var contract in myContracts)
+            {
+                <tr>
+                    <td>@contract.Id</td>
+                    <td>@contract.FromLocation.Name</td>
+                    <td>@contract.ToLocation.Name</td>
+                    <td>@contract.CargoType</td>
+                    <td>@contract.CargoAmount</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No contracts found.</p>
+}
+
+@code {
+    private List<GameContract> myContracts;
+
+    private async Task GetMyContracts()
+    {
+        try
+        {
+            myContracts = await ApiClient.GetPlayerContractsAsync(true);
+        }
+
+        catch { }
+    }
+}
