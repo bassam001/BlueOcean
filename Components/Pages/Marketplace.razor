@@ -1,0 +1,185 @@
+﻿@page "/marketplace"
+@inject TraderApiClient TraderApiClient
+@rendermode InteractiveServer
+
+
+<link href="basic.css" rel="stylesheet" />
+<h3>My Boats</h3>
+
+@if (myBoats == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (myBoats.Count == 0)
+{
+    <p>You do not own any boats.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Current Fuel</th>
+                <th>Max Capacity</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var boat in myBoats)
+            {
+                <tr>
+                    <td>@boat.WorldLocation</td>
+                    <td>@boat.GameBoatType.ToString()</td>
+                    <td>@boat.CurrentFuel</td>
+                    <td>@boat.MaxCapacity</td>
+                    <td>
+                        <button class="btn btn-danger" @onclick="() => OpenSellModal(boat.Id)">Sell</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<h3>Boats for Sale</h3>
+
+@if (boatsForSale == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (boatsForSale.Count == 0)
+{
+    <p>No boats available for sale at the moment.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Current Fuel</th>
+                <th>Max Capacity</th>
+                <th>Max Speed</th>
+                <th>Price</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var boat in boatsForSale)
+            {
+                <tr>
+                    <td>@boat.WorldLocation</td>
+                    <td>@boat.GameBoatType.ToString()</td>
+                    <td>@boat.CurrentFuel</td>
+                    <td>@boat.MaxCapacity</td>
+                    <td>@boat.MaxSpeed</td>
+                    <td>@boat.Price</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => BuyBoat(boat.Id)">Buy</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="popup">
+        <div class="popup-content">
+            <h5>Error</h5>
+            <p>@errorMessage</p>
+            <button class="btn btn-secondary" @onclick="ClosePopup">Close</button>
+        </div>
+    </div>
+}
+
+@if (showSellModal)
+{
+    <div class="popup">
+        <div class="popup-content">
+            <h5>Sell Boat</h5>
+            <p>Enter the asking price for your boat:</p>
+            <input type="number" class="form-control" @bind="askingPrice" min="1" />
+            <button class="btn btn-primary mt-3" @onclick="ConfirmSellBoat">Sell</button>
+            <button class="btn btn-secondary mt-3" @onclick="CloseSellModal">Cancel</button>
+        </div>
+    </div>
+}
+
+
+@code {
+    private List<GameBoatWithCargo> myBoats;
+    private List<GameBoatForSale> boatsForSale;
+    private string errorMessage;
+    private bool showSellModal = false;
+    private Guid selectedBoatId;
+    private int askingPrice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            myBoats = await TraderApiClient.GetBoatAsync();
+            boatsForSale = await TraderApiClient.GetMarketBoatsAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            ShowErrorMessage(ex.Message);
+        }
+    }
+
+    private async Task BuyBoat(Guid boatId)
+    {
+        try
+        {
+            await TraderApiClient.BuyBoatAsync(boatId.ToString());
+            boatsForSale = await TraderApiClient.GetMarketBoatsAsync(); 
+            myBoats = await TraderApiClient.GetBoatAsync(); 
+        }
+        catch (HttpRequestException ex)
+        {
+            ShowErrorMessage(ex.Message);
+        }
+    }
+
+    private void OpenSellModal(Guid boatId)
+    {
+        selectedBoatId = boatId;
+        showSellModal = true;
+    }
+
+    private async Task ConfirmSellBoat()
+    {
+        try
+        {
+            await TraderApiClient.SellBoatAsync(selectedBoatId.ToString(), askingPrice);
+            boatsForSale = await TraderApiClient.GetMarketBoatsAsync(); 
+            myBoats = await TraderApiClient.GetBoatAsync(); 
+            CloseSellModal();
+        }
+        catch (HttpRequestException ex)
+        {
+            ShowErrorMessage(ex.Message);
+        }
+    }
+
+    private void CloseSellModal()
+    {
+        showSellModal = false;
+        askingPrice = 0;
+    }
+
+    private void ShowErrorMessage(string message)
+    {
+        errorMessage = message;
+    }
+
+    private void ClosePopup()
+    {
+        errorMessage = null;
+    }
+}

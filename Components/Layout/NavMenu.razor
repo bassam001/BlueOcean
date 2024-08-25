@@ -11,27 +11,25 @@
             <li class="nav-item">
                 <a class="nav-link" href="/">Home</a>
             </li>
-        
-            <li class="nav-item">
-                <a class="nav-link" href="/boats">Available Boats</a>
-            </li>
             <li class="nav-item">
                 <a class="nav-link" href="/myboat">My Boat</a>
             </li>
          
             <li class="nav-item">
-                <a class="nav-link" href="/market">Market Place</a>
+                <a class="nav-link" href="/marketplace">Market Place</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/available-contracts">Available Contracts</a> 
+                <a class="nav-link" href="/game-strategy">Best Contracts!!!</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/mycontracts">My Contracts</a>
             </li>
-            <li><a href="/settings">Settings</a></li>
             <li class="nav-item">
                 <a class="nav-link" href="/balance">Balance: @(balance?.ToString("C") ?? "Loading...")</a>
             </li>
+            <ul>
+                <li>@_notification</li>
+            </ul>
         </ul>
     </div>
 </nav>
@@ -42,6 +40,16 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadCompanyBalance();
+
+        var signalRClient = new SignalRClient();
+        await signalRClient.InitializeAsync();
+
+        signalRClient.OnMessageReceived += message =>
+        {
+            _notification = message;
+            InvokeAsync(StateHasChanged);
+        };
+
     }
 
     private async Task LoadCompanyBalance()
@@ -57,5 +65,9 @@
             balance = null;
         }
     }
+
+
+    private string _notification = " SignalR..!";
+
 }
 

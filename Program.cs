@@ -8,7 +8,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddHttpClient<TraderApiClient>(client =>
 {
-    client.BaseAddress = new Uri("http://cs-dt1805010:9090/api/");
+    client.BaseAddress = new Uri("https://cstrader.be/api/");
 });
 
 builder.Services.AddLogging(loggingBuilder => loggingBuilder

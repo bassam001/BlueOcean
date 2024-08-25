@@ -65,7 +65,7 @@ else
             bool success = await ApiClient.TakeContractAsync(contractId);
             if (success)
             {
-                await GetAvailableContracts(); // Refresh the list after taking a contract
+                await GetAvailableContracts();
             }
             else
             {

@@ -1,0 +1,106 @@
+﻿@page "/game-strategy"
+@inject TraderApiClient TraderApiClient
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<h3>Game Strategy</h3>
+
+@if (IsLoading)
+{
+    <p>Loading game data...</p>
+}
+else if (PlayerBoats.Count == 0)
+{
+    <p>No boats available. You need to buy a boat first.</p>
+}
+else
+{
+    <div>
+        <h4>Top 3 Suggested Contracts</h4>
+        @if (SuggestedContracts != null && SuggestedContracts.Any())
+        {
+            @foreach (var suggestion in SuggestedContracts)
+            {
+                <div class="contract-suggestion">
+                    <h5>Contract to @suggestion.Contract.ToLocation.Name</h5>
+                    <p><strong>Cargo:</strong> @suggestion.Contract.Cargo</p>
+                    <p><strong>From:</strong> @suggestion.Contract.FromLocation.Name</p>
+                    <p><strong>To:</strong> @suggestion.Contract.ToLocation.Name</p>
+                    <p><strong>Payment:</strong> @suggestion.Contract.TotalPayment</p>
+                    <p><strong>Distance:</strong> @suggestion.Distance</p>
+                    <p><strong>Best Boat Match:</strong> @suggestion.BestBoat.GameBoatType (@suggestion.BestBoat.WorldLocation)</p>
+                    <button class="btn btn-success" @onclick="() => SignContract(suggestion.Contract)">Sign Contract</button>
+                </div>
+                <hr />
+            }
+        }
+        else
+        {
+            <p>No suitable contracts available at the moment.</p>
+        }
+    </div>
+}
+
+@code {
+
+    private bool IsLoading = true;
+    private List<GameBoatWithCargo> PlayerBoats = new();
+    private List<GameAvailableContract> AvailableContracts = new();
+    private List<(GameAvailableContract Contract, double Distance, GameBoatWithCargo BestBoat)> SuggestedContracts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGameData();
+        IsLoading = false;
+    }
+
+    private async Task LoadGameData()
+    {
+        PlayerBoats = await TraderApiClient.GetBoatAsync();
+        if (PlayerBoats.Count > 0)
+        {
+            await FindBestContracts();
+        }
+    }
+
+    private async Task FindBestContracts()
+    {
+        AvailableContracts = await TraderApiClient.GetAvailableContractsAsync();
+        var contractSuggestions = new List<(GameAvailableContract, double, GameBoatWithCargo)>();
+
+        foreach (var contract in AvailableContracts)
+        {
+            var distance = await TraderApiClient.GetDistanceAsync(contract.FromLocation.NodeId, contract.ToLocation.NodeId);
+            var bestBoat = GetBestMatchingBoat(contract);
+
+            if (bestBoat != null)
+            {
+                contractSuggestions.Add((contract, distance, bestBoat));
+            }
+        }
+
+        SuggestedContracts = contractSuggestions
+            .ToList();
+    }
+
+    private GameBoatWithCargo GetBestMatchingBoat(GameAvailableContract contract)
+    {
+        return PlayerBoats
+            .Where(b => b.MaxCapacity >= contract.CargoAmount && b.CurrentPosition == contract.FromLocation.NodeId)
+            .OrderByDescending(b => b.MaxCapacity)
+            .FirstOrDefault();
+    }
+
+    private async Task SignContract(GameAvailableContract contract)
+    {
+        var success = await TraderApiClient.TakeContractAsync(contract.Id.ToString());
+        if (success)
+        {
+            NavigationManager.NavigateTo($"/handle-contract/{contract.Id}");
+        }
+        else
+        {
+            await TraderApiClient.ShowErrorMessage("Failed to sign the contract. Please try again.");
+        }
+    }
+}

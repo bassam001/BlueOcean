@@ -372,4 +372,23 @@ public class TraderApiClient
         throw new HttpRequestException($"Error: {message}");
     }
 
+    public async Task<int> GetDistanceAsync(int fromNodeId, int toNodeId)
+    {
+        //traag, moet herbekeken
+        var request = new HttpRequestMessage(HttpMethod.Get, $"location/distance/{fromNodeId}/{toNodeId}");
+        request.Headers.Add("trader-key", TraderKey);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<int>();
+        }
+        else
+        {
+            throw new HttpRequestException($"Error fetching distance: {response.ReasonPhrase}");
+        }
+    }
+
+
 }

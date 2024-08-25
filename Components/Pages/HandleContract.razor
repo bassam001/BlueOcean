@@ -1,0 +1,152 @@
+﻿@page "/handle-contract/{contractId:guid}"
+@inject TraderApiClient TraderApiClient
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<h3>Handle Contract</h3>
+
+@if (SelectedContract == null)
+{
+    <p>Loading contract details...</p>
+}
+else
+{
+    <div>
+        <h4>Contract Details</h4>
+        <p><strong>Cargo:</strong> @SelectedContract.Cargo</p>
+        <p><strong>From:</strong> @SelectedContract.FromLocation.Name</p>
+        <p><strong>To:</strong> @SelectedContract.ToLocation.Name</p>
+        <p><strong>Payment:</strong> @SelectedContract.TotalPayment</p>
+        <p><strong>Deliver Before:</strong> @SelectedContract.DeliverBefore.ToShortDateString()</p>
+    </div>
+
+    <div>
+        <h4>Available Boats</h4>
+        @if (AvailableBoats.Any())
+        {
+            @foreach (var boat in AvailableBoats)
+            {
+                var canCarry = boat.MaxCapacity >= SelectedContract.CargoAmount;
+                var requiredFuel = GetRequiredFuel(boat, SelectedContract);
+                var hasEnoughFuel = boat.CurrentFuel >= requiredFuel;
+
+                <div class="boat-details">
+                    <h5>@boat.GameBoatType - @boat.CurrentFuel Fuel (@boat.WorldLocation, State: @GetBoatState(boat))</h5>
+                    <p><strong>Capacity:</strong> @boat.MaxCapacity</p>
+                    <p><strong>Required Fuel:</strong> @requiredFuel</p>
+                    <p>@(canCarry ? "✅ Can Carry Cargo" : "❌ Cannot Carry Cargo")</p>
+                    <p>@(hasEnoughFuel ? "✅ Enough Fuel" : "❌ Not Enough Fuel")</p>
+
+                    @if (boat.Moving || boat.Progression < 100)
+                    {
+                        <p>State: Moving (Progress: @boat.Progression%)</p>
+                    }
+                    else if (boat.CurrentAmountLoaded < SelectedContract.CargoAmount)
+                    {
+                        <p>State: Loading (Progress: @(boat.CurrentAmountLoaded * 100 / SelectedContract.CargoAmount)%)</p>
+                    }
+                    else if (boat.CurrentAmountLoaded == SelectedContract.CargoAmount)
+                    {
+                        <p>State: Unloading (Progress: @(boat.CurrentAmountLoaded * 100 / SelectedContract.CargoAmount)%)</p>
+                    }
+
+                    <button class="btn btn-primary" @onclick="() => MoveBoatToLocation(boat.Id, SelectedContract.FromLocation.NodeId)" disabled="@(boat.Moving || !canCarry || !hasEnoughFuel)">Move to Contract Location</button>
+                    <button class="btn btn-success" @onclick="() => LoadBoat(boat.Id)" disabled="@(boat.Moving || !canCarry)">Load Boat</button>
+                    <button class="btn btn-warning" @onclick="() => MoveBoatToLocation(boat.Id, SelectedContract.ToLocation.NodeId)" disabled="@(boat.Moving || !canCarry || !hasEnoughFuel)">Move to Destination</button>
+                    <button class="btn btn-danger" @onclick="() => UnloadBoat(boat.Id)" disabled="@(boat.Moving || boat.CurrentAmountLoaded == 0)">Unload Boat</button>
+                </div>
+                <hr />
+            }
+        }
+        else
+        {
+            <p>No boats available.</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public Guid contractId { get; set; }
+
+    private GameContract SelectedContract;
+    private List<GameBoatWithCargo> AvailableBoats = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SelectedContract = await TraderApiClient.GetPlayerContractsAsync(false)
+                             .ContinueWith(t => t.Result.FirstOrDefault(c => c.Id == contractId));
+
+        if (SelectedContract != null)
+        {
+            AvailableBoats = await TraderApiClient.GetBoatAsync();
+        }
+    }
+
+    private int GetRequiredFuel(GameBoatWithCargo boat, GameContract contract)
+    {
+
+        var distance = boat.CurrentPosition + contract.ToLocation.NodeId;
+        return boat.ConsumptionPerDistance * distance;
+    }
+
+    private string GetBoatState(GameBoatWithCargo boat)
+    {
+        if (boat.Moving)
+        {
+            return "Moving";
+        }
+        else if (boat.CurrentAmountLoaded < SelectedContract.CargoAmount)
+        {
+            return "Loading";
+        }
+        else if (boat.CurrentAmountLoaded == SelectedContract.CargoAmount)
+        {
+            return "Ready to Move";
+        }
+        else
+        {
+            return "Idle";
+        }
+    }
+
+    private async Task MoveBoatToLocation(Guid boatId, int nodeId)
+    {
+        bool success = await TraderApiClient.MoveBoatAsync(boatId.ToString(), nodeId);
+        if (!success)
+        {
+            await TraderApiClient.ShowErrorMessage("Failed to move the boat. Please try again.");
+        }
+        else
+        {
+            NavigationManager.NavigateTo($"/handle-contract/{contractId}");
+        }
+    }
+
+    private async Task LoadBoat(Guid boatId)
+    {
+        var amountToLoad = SelectedContract.CargoAmount;
+        bool success = await TraderApiClient.LoadCargoAsync(boatId.ToString(), SelectedContract.Id.ToString(), amountToLoad);
+        if (!success)
+        {
+            await TraderApiClient.ShowErrorMessage("Failed to load the boat. Please try again.");
+        }
+        else
+        {
+            NavigationManager.NavigateTo($"/handle-contract/{contractId}");
+        }
+    }
+
+    private async Task UnloadBoat(Guid boatId)
+    {
+        var amountToUnload = SelectedContract.CargoAmount;
+        bool success = await TraderApiClient.UnloadCargoAsync(boatId.ToString(), SelectedContract.Id.ToString(), amountToUnload);
+        if (!success)
+        {
+            await TraderApiClient.ShowErrorMessage("Failed to unload the boat. Please try again.");
+        }
+        else
+        {
+            NavigationManager.NavigateTo($"/handle-contract/{contractId}");
+        }
+    }
+}

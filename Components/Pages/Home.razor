@@ -2,20 +2,29 @@
 @rendermode InteractiveServer
 
 
+
+<link href="basic.css" rel="stylesheet" />
+
+
+
 <div class="home-container">
 
     <main class="main-actions">
-        <div class="action-card" @onclick="NavigateToGame">
-            <img src="images/new-contracts.png" alt="Handel Contracts">
-            <h3>Accept New Contracts</h3>
-        </div>
         <div class="action-card" @onclick="NavigateToMyBoats">
             <img src="Images/view-boats.png" alt="View Boats">
             <h3>View My Boats</h3>
         </div>
-        <div class="action-card" @onclick="NavigateToFuelPrices">
-            <img src="images/fuel-prices.png" alt="Check Fuel Prices">
-            <h3>Check Fuel Prices</h3>
+        <div class="action-card" @onclick="NavigateToGame">
+            <img src="images/new-contracts.png" alt="Handel Contracts">
+            <h3>Play Game</h3>
+        </div>
+        <div class="action-card" @onclick="NavigateToAvailableContracts">
+            <img src="images/new-contracts.png" alt="Available-contracts">
+            <h3>Available-contracts</h3>
+        </div>
+        <div class="action-card" @onclick="NavigateTostrategy">
+            <img src="images/thinking.png" alt="Best Contracts!">
+            <h3>Best Contracts</h3>
         </div>
         <div class="action-card" @onclick="NavigateToMarketplace">
             <img src="images/browse-marketplace.png" alt="Browse Marketplace">
@@ -34,13 +43,13 @@
     private void NavigateToGame()
     {
 
-        NavigationManager.NavigateTo("/game-operations");
+        NavigationManager.NavigateTo("/mycontracts");
     }
 
-    private void NavigateToFuelPrices()
+    private void NavigateToAvailableContracts()
     {
 
-        NavigationManager.NavigateTo("/fuel-boat");
+        NavigationManager.NavigateTo("/available-contracts");
     }
 
     private void NavigateToMarketplace()
@@ -48,78 +57,11 @@
         NavigationManager.NavigateTo("/marketplace");
     }
 
+    private void NavigateTostrategy()
+    {
+        NavigationManager.NavigateTo("/game-strategy");
+    }
+
+
     [Inject] NavigationManager NavigationManager { get; set; }
 }
-
-
-<style>
-    .home-container {
-        background: url('images/maritime-background.png') no-repeat center center fixed;
-        background-size: cover;
-        color: #fff;
-        font-family: Arial, sans-serif;
-    }
-
-    .header {
-        background-color: rgba(0, 51, 102, 0.8);
-        padding: 20px;
-        text-align: center;
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-    }
-
-        .header h1 {
-            margin: 0;
-            font-size: 2.5rem;
-        }
-
-    .nav-links {
-        list-style: none;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        margin: 15px 0 0;
-    }
-
-        .nav-links li {
-            margin: 0 15px;
-        }
-
-        .nav-links a {
-            color: #fff;
-            text-decoration: none;
-            font-size: 1.2rem;
-        }
-
-    .main-actions {
-        display: flex;
-        justify-content: space-around;
-        flex-wrap: wrap;
-        padding: 50px 0;
-    }
-
-    .action-card {
-        background-color: rgba(0, 51, 102, 0.9);
-        border-radius: 15px;
-        padding: 20px;
-        text-align: center;
-        margin: 20px;
-        width: 200px;
-        transition: transform 0.3s ease;
-    }
-
-        .action-card img {
-            max-width: 100px;
-            margin-bottom: 15px;
-        }
-
-        .action-card h3 {
-            font-size: 1.5rem;
-            margin: 0;
-        }
-
-        .action-card:hover {
-            transform: scale(1.05);
-        }
-</style>
