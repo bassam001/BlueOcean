@@ -5,8 +5,6 @@
 
 <h3>My Contracts</h3>
 
-<button class="btn btn-primary" @onclick="GetMyContracts">Load My Contracts</button>
-
 @if (myContracts != null && myContracts.Any())
 {
     <table class="table mt-3">
@@ -47,7 +45,12 @@ else
 @code {
     private List<GameContract> myContracts;
 
-    private async Task GetMyContracts()
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMyContracts();
+    }
+
+    private async Task LoadMyContracts()
     {
         try
         {
@@ -55,6 +58,7 @@ else
         }
         catch (Exception ex)
         {
+            Console.WriteLine("Error loading contracts: " + ex.Message);
         }
     }
 

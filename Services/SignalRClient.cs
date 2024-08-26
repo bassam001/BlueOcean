@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using System;
-using System.Threading.Tasks;
+
 
 public class SignalRClient
 {
@@ -8,6 +8,8 @@ public class SignalRClient
     public event Action<string> OnMessageReceived;
     public async Task InitializeAsync()
     {
+
+        //later 
         _connection = new HubConnectionBuilder()
             .WithUrl("https://cstrader.be/hubs/changetrackerhub", options =>
             {
@@ -30,6 +32,7 @@ public class SignalRClient
 
     private void ShowMessage(string message)
     {
+        //later
 
     }
     private void NotifyMessageReceived(string message)

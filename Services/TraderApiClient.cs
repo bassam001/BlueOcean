@@ -1,8 +1,11 @@
 ﻿
 
+using Microsoft.AspNetCore.SignalR.Client;
+
 public class TraderApiClient
 {
     private readonly HttpClient _httpClient;
+    private HubConnection _hubConnection;
 
     //to do later
     //should be  Environment.GetEnvironmentVariable("TRADER_API_KEY");
@@ -389,6 +392,35 @@ public class TraderApiClient
             throw new HttpRequestException($"Error fetching distance: {response.ReasonPhrase}");
         }
     }
+    public async Task InitializeSignalRAsync()
+    {
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://cstrader.be/hubs/changetrackerhub", options =>
+            {
+                options.Headers.Add("trader-key", TraderKey);
+            })
+            .Build();
 
+        _hubConnection.On<GameBoatWithCargo>("BoatsChanged", OnBoatsChanged);
+
+        await _hubConnection.StartAsync();
+    }
+
+
+    public void OnBoatsChanged(GameBoatWithCargo updatedBoat)
+    {
+        Console.WriteLine($"Boat updated: {updatedBoat.Id}");
+    }
+
+    public async Task DisposeSignalRAsync()
+    {
+        if (_hubConnection != null)
+        {
+            await _hubConnection.StopAsync();
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+ 
 
 }
